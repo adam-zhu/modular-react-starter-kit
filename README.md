@@ -9,7 +9,7 @@ Build UI using "modules". Modules are just React components that do special stuf
 - dispatch redux actions
 - render
 
-The factory function for creating a module is
+The function for creating a module is
 
 ```
 export const DynamicModule = ({
