@@ -42,7 +42,7 @@ export const DynamicModule = ({
 };
 ```
 
-[<DynamicModuleLoader /> comes from `redux-dynamic-modules`](https://github.com/microsoft/redux-dynamic-modules)
+[`<DynamicModuleLoader />` comes from `redux-dynamic-modules`](https://github.com/microsoft/redux-dynamic-modules).
 
 Advantages of this method are that UI can be built by assembling entirely isolated components without sacrificing global control. Modules are React components, and when they are mounted or unmounted by the React DOM they set up and manage all of their dependencies in the background. When a module is declared as part of a React component's render content, it is passed a `MODULE_KEY` which is both the global Redux store key its reducer is keyed under but also the prefix for all its action types.
 
