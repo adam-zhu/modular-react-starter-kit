@@ -4,7 +4,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 Build UI using "modules". Modules are just React components that do special stuff when they are mounted or unmounted by the React engine. The things that modules do are:
 
-- mount/unount a reducer onto the global redux store
+- mount/unmount a reducer onto the global redux store
 - install/uninstall any redux middlewares
 - dispatch redux actions
 - render
