@@ -51,7 +51,19 @@ Because the React DOM is the top-level controller of what is loaded and what is 
 Here is an example module declaration:
 
 ```
+[ModuleName]
+|__ components
+    |__ ROOT.js
+|__ module.js
+|__ reducer.js
+|__ sagas.js
+|__ selectors.js
+|__ services.js
+```
+
+```
 // module.js
+
 import React from "react";
 import { DynamicModule } from "Lib/modules";
 import createModuleRootReducer from "./reducer";
@@ -95,6 +107,7 @@ export default ({ MODULE_KEY, children, ...props }) => {
 
 ```
 // reducer.js
+
 const initialState = {
   exampleData: undefined
 };
@@ -126,6 +139,7 @@ export default createModuleRootReducer;
 
 ```
 // sagas.js
+
 import { call, put, takeEvery, all } from "redux-saga/effects";
 import { createTriggerCreator, createSagaListener } from "Lib/modules";
 import { getExampleData } from "./services";
@@ -167,7 +181,38 @@ export default createModuleRootSaga;
 ```
 
 ```
+// services.js
+
+import { mockService } from "Lib/utils";
+
+export const getExampleData = async () => {
+  const data = await mockService({
+    randomData: Math.random()
+  });
+
+  return data;
+};
+```
+
+```
+// selectors.js
+
+import { createModuleSelector } from "Lib/modules";
+
+export const getExampleData = MODULE_KEY => rootState => {
+  const exampleDataSelector = createModuleSelector(
+    MODULE_KEY,
+    state => state.exampleData
+  );
+  const exampleData = exampleDataSelector(rootState);
+
+  return exampleData;
+};
+```
+
+```
 // components/ROOT.js
+
 import React, { useContext } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { getExampleData } from "../selectors";
@@ -175,7 +220,7 @@ import ModuleContext from "../module";
 
 const ExampleModule = ({ MODULE_KEY }) => {
   const exampleData = useSelector(
-    useContext(ModuleContext) || getExampleData(MODULE_KEY)
+    getExampleData(useContext(ModuleContext) || MODULE_KEY)
   );
 
   return (

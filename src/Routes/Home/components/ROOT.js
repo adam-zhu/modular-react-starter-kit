@@ -1,8 +1,9 @@
-import React, { useContext } from "react";
+import React, { lazy, Suspense, useContext } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { getData } from "../selectors";
 import { ModuleContext } from "../module";
-import ExampleModule from "Shared/Modules/ExampleModule/module";
+
+const ExampleModule = lazy(() => import("Shared/Modules/ExampleModule/module"));
 
 const Home = ({ MODULE_KEY }) => {
   const data = useSelector(getData(useContext(ModuleContext) || MODULE_KEY));
@@ -25,8 +26,10 @@ const Home = ({ MODULE_KEY }) => {
       ) : (
         <progress />
       )}
-      <ExampleModule MODULE_KEY="HomePageExampleModule1" />
-      <ExampleModule MODULE_KEY="HomePageExampleModule2" />
+      <Suspense fallback={"loading ExampleModule..."}>
+        <ExampleModule MODULE_KEY="HomePageExampleModule1" />
+        <ExampleModule MODULE_KEY="HomePageExampleModule2" />
+      </Suspense>
     </>
   );
 };

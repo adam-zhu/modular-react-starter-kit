@@ -5,7 +5,7 @@ import ModuleContext from "../module";
 
 const ExampleModule = ({ MODULE_KEY }) => {
   const exampleData = useSelector(
-    useContext(ModuleContext) || getExampleData(MODULE_KEY)
+    getExampleData(useContext(ModuleContext) || MODULE_KEY)
   );
 
   return (
