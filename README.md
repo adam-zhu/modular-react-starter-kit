@@ -1,68 +1,190 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+## React/Redux Modules
 
-In the project directory, you can run:
+Build UI using "modules". Modules are just React components that do special stuff when they are mounted or unmounted by the React engine. The things that modules do are:
 
-### `yarn start`
+- mount/unount a reducer onto the global redux store
+- install/uninstall any redux middlewares
+- dispatch redux actions
+- render
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+The factory function for creating a module is
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+```
+export const DynamicModule = ({
+  MODULE_KEY,
+  ModuleRootComponent,
+  ModuleRootReducer,
+  ModuleRootSaga,
+  onLoadActions,
+  onUnloadActions,
+  children,
+  ...props
+}) => {
+  const moduleConfig = {
+    id: MODULE_KEY,
+    reducerMap: {
+      [MODULE_KEY]: ModuleRootReducer
+    },
+    sagas: [ModuleRootSaga],
+    initialActions: onLoadActions,
+    finalActions: onUnloadActions
+  };
 
-### `yarn test`
+  return (
+    <DynamicModuleLoader modules={[moduleConfig]}>
+      <ModuleRootComponent MODULE_KEY={MODULE_KEY} {...props}>
+        {children}
+      </ModuleRootComponent>
+    </DynamicModuleLoader>
+  );
+};
+```
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+[<DynamicModuleLoader /> comes from `redux-dynamic-modules`](https://github.com/microsoft/redux-dynamic-modules)
 
-### `yarn build`
+Advantages of this method are that UI can be built by assembling entirely isolated components without sacrificing global control. Modules are React components, and when they are mounted or unmounted by the React DOM they set up and manage all of their dependencies in the background. When a module is declared as part of a React component's render content, it is passed a `MODULE_KEY` which is both the global Redux store key its reducer is keyed under but also the prefix for all its action types.
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Because the React DOM is the top-level controller of what is loaded and what is not, if a module is mounted to the React DOM then we have access to its state through its `MODULE_KEY`. We can then use this to expose any exterior interactions against the module's state from elsewhere in the application. Modules do not need to know about any parent context and can ask for any data they need to be passed in at mount time. With the use of a dynamic loading technique such as `React.lazy` or `react-loadable`, modules can be easily codesplit and dynamically loaded at runtime.
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+Here is an example module declaration:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```
+// module.js
+import React from "react";
+import { DynamicModule } from "Lib/modules";
+import createModuleRootReducer from "./reducer";
+import createModuleRootSaga, { fetchExampleDataTriggerCreator } from "./sagas";
+import ExampleModuleRootComponent from "./components/ROOT";
 
-### `yarn eject`
+/*
+  @@@@@@@@@@@@@@@@@@@@@@@@@
+    ExampleModule
+  @@@@@@@@@@@@@@@@@@@@@@@@@
+*/
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+export const ModuleContext = React.createContext();
+export default ({ MODULE_KEY, children, ...props }) => {
+  const moduleRootReducer = createModuleRootReducer(MODULE_KEY);
+  const moduleRootSaga = createModuleRootSaga(MODULE_KEY);
+  const fetchExampleDataTrigger = fetchExampleDataTriggerCreator(MODULE_KEY);
+  const onLoadActions = [
+    {
+      type: fetchExampleDataTrigger
+    }
+  ];
+  const onUnloadActions = [];
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+  return (
+    <ModuleContext.Provider value={MODULE_KEY}>
+      <DynamicModule
+        MODULE_KEY={MODULE_KEY}
+        ModuleRootComponent={ExampleModuleRootComponent}
+        ModuleRootReducer={moduleRootReducer}
+        ModuleRootSaga={moduleRootSaga}
+        onLoadActions={onLoadActions}
+        onUnloadActions={onUnloadActions}
+        children={children}
+        {...props}
+      />
+    </ModuleContext.Provider>
+  );
+};
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```
+// reducer.js
+const initialState = {
+  exampleData: undefined
+};
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+export const createModuleActionTypes = MODULE_KEY => ({
+  SET_EXAMPLE_DATA: `${MODULE_KEY}/ExampleModule/set_example_data`
+});
 
-## Learn More
+const createModuleRootReducer = MODULE_KEY => (
+  state = initialState,
+  action
+) => {
+  const actionTypes = createModuleActionTypes(MODULE_KEY);
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+  switch (action.type) {
+    case actionTypes.SET_EXAMPLE_DATA:
+      return {
+        ...state,
+        exampleData: action.payload
+      };
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    default:
+      return state;
+  }
+};
 
-### Code Splitting
+export default createModuleRootReducer;
+```
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
+```
+// sagas.js
+import { call, put, takeEvery, all } from "redux-saga/effects";
+import { createTriggerCreator, createSagaListener } from "Lib/modules";
+import { getExampleData } from "./services";
+import { createModuleActionTypes } from "./reducer";
 
-### Analyzing the Bundle Size
+export const fetchExampleDataTriggerCreator = createTriggerCreator(
+  "fetchExampleData"
+);
+const fetchExampleDataCreator = MODULE_KEY =>
+  function* fetchExampleData({ type, payload }) {
+    const actionTypes = createModuleActionTypes(MODULE_KEY);
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+    try {
+      const exampleData = yield call(getExampleData);
 
-### Making a Progressive Web App
+      yield put({
+        type: actionTypes.SET_EXAMPLE_DATA,
+        payload: exampleData
+      });
+    } catch (e) {
+      yield put({
+        type: actionTypes.SET_EXAMPLE_DATA,
+        payload: null
+      });
+    }
+  };
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+const createModuleRootSaga = MODULE_KEY =>
+  function* ExampleModuleRootSaga() {
+    const fetchExampleData = fetchExampleDataTriggerCreator(MODULE_KEY);
+    const fetchExampleDataTrigger = fetchExampleDataCreator(MODULE_KEY);
 
-### Advanced Configuration
+    yield all([
+      createSagaListener(takeEvery, fetchExampleData, fetchExampleDataTrigger)
+    ]);
+  };
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
+export default createModuleRootSaga;
+```
 
-### Deployment
+```
+// components/ROOT.js
+import React, { useContext } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { getExampleData } from "../selectors";
+import ModuleContext from "../module";
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
+const ExampleModule = ({ MODULE_KEY }) => {
+  const exampleData = useSelector(
+    useContext(ModuleContext) || getExampleData(MODULE_KEY)
+  );
 
-### `yarn build` fails to minify
+  return (
+    <div>
+      <h6>Example Module</h6>
+      <pre>{JSON.stringify(exampleData, null, 2)}</pre>
+    </div>
+  );
+};
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+export default ExampleModule;
+```

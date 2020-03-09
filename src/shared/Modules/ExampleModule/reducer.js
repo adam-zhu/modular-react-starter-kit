@@ -1,9 +1,9 @@
 const initialState = {
-  data: undefined
+  exampleData: undefined
 };
 
 export const createModuleActionTypes = MODULE_KEY => ({
-  SET_DATA: `${MODULE_KEY}/About/set_data`
+  SET_EXAMPLE_DATA: `${MODULE_KEY}/ExampleModule/set_example_data`
 });
 
 const createModuleRootReducer = MODULE_KEY => (
@@ -13,10 +13,10 @@ const createModuleRootReducer = MODULE_KEY => (
   const actionTypes = createModuleActionTypes(MODULE_KEY);
 
   switch (action.type) {
-    case actionTypes.SET_DATA:
+    case actionTypes.SET_EXAMPLE_DATA:
       return {
         ...state,
-        data: action.payload
+        exampleData: action.payload
       };
 
     default:

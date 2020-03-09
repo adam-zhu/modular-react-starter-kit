@@ -1,25 +1,39 @@
 import React from "react";
-import { DynamicModuleLoader } from "redux-dynamic-modules-react";
-import ModuleRootReducer from "./reducer";
-import ModuleRootSaga, { TRIGGER_fetchData } from "./sagas";
-import ModuleRootComponent from "./components/ROOT";
+import { DynamicModule } from "Lib/modules";
+import createModuleRootReducer from "./reducer";
+import createModuleRootSaga, { fetchDataTriggerCreator } from "./sagas";
+import ExampleModuleRootComponent from "./components/ROOT";
 
-const BASE_CONFIG = {
-  id: "Home",
-  initialActions: [{ type: TRIGGER_fetchData }], // actions to dispatch on module load
-  finalActions: [] // actions to dispatch on module unload
+/*
+  @@@@@@@@@@@@@@@@@@@@@@@@@
+    Home (route)
+  @@@@@@@@@@@@@@@@@@@@@@@@@
+*/
+
+export const ModuleContext = React.createContext();
+export default ({ MODULE_KEY, children, ...props }) => {
+  const moduleRootReducer = createModuleRootReducer(MODULE_KEY);
+  const moduleRootSaga = createModuleRootSaga(MODULE_KEY);
+  const fetchDataTrigger = fetchDataTriggerCreator(MODULE_KEY);
+  const onLoadActions = [
+    {
+      type: fetchDataTrigger
+    }
+  ];
+  const onUnloadActions = [];
+
+  return (
+    <ModuleContext.Provider value={MODULE_KEY}>
+      <DynamicModule
+        MODULE_KEY={MODULE_KEY}
+        ModuleRootComponent={ExampleModuleRootComponent}
+        ModuleRootReducer={moduleRootReducer}
+        ModuleRootSaga={moduleRootSaga}
+        onLoadActions={onLoadActions}
+        onUnloadActions={onUnloadActions}
+        children={children}
+        {...props}
+      />
+    </ModuleContext.Provider>
+  );
 };
-
-export const MODULE_CONFIG = {
-  ...BASE_CONFIG,
-  reducerMap: {
-    [BASE_CONFIG.id]: ModuleRootReducer
-  },
-  sagas: [ModuleRootSaga]
-};
-
-export default () => (
-  <DynamicModuleLoader modules={[MODULE_CONFIG]}>
-    <ModuleRootComponent />
-  </DynamicModuleLoader>
-);

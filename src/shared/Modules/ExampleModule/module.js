@@ -1,12 +1,12 @@
 import React from "react";
 import { DynamicModule } from "Lib/modules";
 import createModuleRootReducer from "./reducer";
-import createModuleRootSaga, { fetchDataTriggerCreator } from "./sagas";
+import createModuleRootSaga, { fetchExampleDataTriggerCreator } from "./sagas";
 import ExampleModuleRootComponent from "./components/ROOT";
 
 /*
   @@@@@@@@@@@@@@@@@@@@@@@@@
-    About (route)
+    ExampleModule
   @@@@@@@@@@@@@@@@@@@@@@@@@
 */
 
@@ -14,10 +14,10 @@ export const ModuleContext = React.createContext();
 export default ({ MODULE_KEY, children, ...props }) => {
   const moduleRootReducer = createModuleRootReducer(MODULE_KEY);
   const moduleRootSaga = createModuleRootSaga(MODULE_KEY);
-  const fetchDataTrigger = fetchDataTriggerCreator(MODULE_KEY);
+  const fetchExampleDataTrigger = fetchExampleDataTriggerCreator(MODULE_KEY);
   const onLoadActions = [
     {
-      type: fetchDataTrigger
+      type: fetchExampleDataTrigger
     }
   ];
   const onUnloadActions = [];

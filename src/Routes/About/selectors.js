@@ -1,3 +1,8 @@
-import { createSelector } from "reselect";
+import { createModuleSelector } from "Lib/modules";
 
-export const getData = rootState => rootState.About.data;
+export const getData = MODULE_KEY => rootState => {
+  const dataSelector = createModuleSelector(MODULE_KEY, state => state.data);
+  const data = dataSelector(rootState);
+
+  return data;
+};

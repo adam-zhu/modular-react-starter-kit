@@ -1,12 +1,12 @@
 import React from "react";
 import { DynamicModule } from "Lib/modules";
 import createModuleRootReducer from "./reducer";
-import createModuleRootSaga, { fetchDataTriggerCreator } from "./sagas";
-import ExampleModuleRootComponent from "./components/ROOT";
+import createModuleRootSaga, { fetchUserTriggerCreator } from "./sagas";
+import AppShellRootComponent from "./components/ROOT";
 
 /*
   @@@@@@@@@@@@@@@@@@@@@@@@@
-    About (route)
+    AppShell
   @@@@@@@@@@@@@@@@@@@@@@@@@
 */
 
@@ -14,10 +14,10 @@ export const ModuleContext = React.createContext();
 export default ({ MODULE_KEY, children, ...props }) => {
   const moduleRootReducer = createModuleRootReducer(MODULE_KEY);
   const moduleRootSaga = createModuleRootSaga(MODULE_KEY);
-  const fetchDataTrigger = fetchDataTriggerCreator(MODULE_KEY);
+  const fetchUserTrigger = fetchUserTriggerCreator(MODULE_KEY);
   const onLoadActions = [
     {
-      type: fetchDataTrigger
+      type: fetchUserTrigger
     }
   ];
   const onUnloadActions = [];
@@ -26,7 +26,7 @@ export default ({ MODULE_KEY, children, ...props }) => {
     <ModuleContext.Provider value={MODULE_KEY}>
       <DynamicModule
         MODULE_KEY={MODULE_KEY}
-        ModuleRootComponent={ExampleModuleRootComponent}
+        ModuleRootComponent={AppShellRootComponent}
         ModuleRootReducer={moduleRootReducer}
         ModuleRootSaga={moduleRootSaga}
         onLoadActions={onLoadActions}

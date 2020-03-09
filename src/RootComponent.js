@@ -1,17 +1,17 @@
 import React from "react";
 import { Provider } from "react-redux";
 import { BrowserRouter as Router } from "react-router-dom";
-import createStore from "./store";
-import GlobalAppShell from "./GLOBAL/module";
-import Routes from "./Routes";
+import createStore from "Store";
+import AppShell from "AppShell/module";
+import Routes from "Routes";
 
 const RootComponent = () => (
   <div id="RootComponent">
     <Provider store={createStore()}>
       <Router>
-        <GlobalAppShell>
+        <AppShell MODULE_KEY="GlobalAppShell">
           <Routes />
-        </GlobalAppShell>
+        </AppShell>
       </Router>
     </Provider>
   </div>
