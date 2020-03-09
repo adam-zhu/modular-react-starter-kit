@@ -44,7 +44,7 @@ export const DynamicModule = ({
 
 [`<DynamicModuleLoader />` comes from `redux-dynamic-modules`](https://github.com/microsoft/redux-dynamic-modules).
 
-Advantages of this method are that UI can be built by assembling entirely isolated components without sacrificing global control. Modules are React components, and when they are mounted or unmounted by the React DOM they set up and manage all of their dependencies in the background. When a module is declared as part of a React component's render content, it is passed a `MODULE_KEY` which is both the global Redux store key its reducer is keyed under but also the prefix for all its action types.
+Advantages of this method are that UI can be built by assembling entirely isolated components without sacrificing global control. Modules are React components, and when they are mounted or unmounted by the React DOM they set up and manage all of their dependencies in the background. When a module is declared as part of a React component's render content, it is passed a `MODULE_KEY` which is both the global Redux store key its reducer is keyed under and also the prefix for all its action types.
 
 Because the React DOM is the top-level controller of what is loaded and what is not, if a module is mounted to the React DOM then we have access to its state through its `MODULE_KEY`. We can then use this to expose any exterior interactions against the module's state from elsewhere in the application. Modules do not need to know about any parent context and can ask for any data they need to be passed in at mount time. With the use of a dynamic loading technique such as `React.lazy` or `react-loadable`, modules can be easily codesplit and dynamically loaded at runtime.
 
