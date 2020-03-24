@@ -1,36 +1,31 @@
-import { call, put, takeEvery } from "redux-saga/effects";
-import { createRootSaga, getSagaTriggers } from "Lib/modules";
+import { all, call, put, spawn, takeLatest } from "redux-saga/effects";
 import { getHomeData } from "./services";
-import { createActionTypes } from "./reducer";
+import { ACTION_TYPES } from "./reducer";
 
-const fetchData = MODULE_KEY =>
-  function*({ type, payload }) {
-    const actionTypes = createActionTypes(MODULE_KEY);
+const fetchDataSaga = function*(triggerAction) {
+  try {
+    const data = yield call(getHomeData);
 
-    try {
-      const data = yield call(getHomeData);
-
-      yield put({ type: actionTypes.SET_DATA, payload: data });
-    } catch (e) {
-      yield put({ type: actionTypes.SET_DATA, payload: null });
-    }
-  };
-
-const getSagaAttachments = MODULE_KEY => ({
-  fetchData: {
-    take: takeEvery,
-    trigger: `${MODULE_KEY}/ExampleModule/TRIGGER_fetchData`,
-    saga: fetchData(MODULE_KEY)
+    yield put({ type: ACTION_TYPES.SET, payload: { data } });
+  } catch (e) {
+    yield put({ type: ACTION_TYPES.SET, payload: { data: null } });
   }
-});
-
-const initModuleSagas = MODULE_KEY => {
-  const sagaAttachments = getSagaAttachments(MODULE_KEY);
-
-  return {
-    rootSaga: createRootSaga(sagaAttachments),
-    triggers: getSagaTriggers(sagaAttachments)
-  };
 };
 
-export default initModuleSagas;
+export const SAGAS = {
+  fetchData: {
+    take: takeLatest,
+    trigger: "Home/fetchData",
+    saga: fetchDataSaga
+  }
+};
+
+export default function* ModuleRootSaga() {
+  yield all(
+    Object.values(SAGAS).map(({ take, trigger, saga }) =>
+      spawn(function*() {
+        yield take(trigger, saga);
+      })
+    )
+  );
+}

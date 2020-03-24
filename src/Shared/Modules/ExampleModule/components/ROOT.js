@@ -1,12 +1,17 @@
-import React, { useContext } from "react";
+import React from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { getExampleData } from "../selectors";
-import { ModuleContext } from "../module";
+import { SAGAS } from "../sagas";
 
-const ExampleModule = () => {
+const ExampleModule = props => {
   const exampleData = useSelector(
-    getExampleData(useContext(ModuleContext).MODULE_KEY)
+    rootState => rootState.ExampleModule.exampleData
   );
+  const dispatch = useDispatch();
+  const reloadDataHandler = e =>
+    dispatch({
+      type: SAGAS.fetchExampleData.trigger,
+      showLoading: true
+    });
 
   return (
     <div
@@ -19,7 +24,11 @@ const ExampleModule = () => {
     >
       <h6>Example Module</h6>
       {exampleData ? (
-        <pre>{JSON.stringify(exampleData, null, 2)}</pre>
+        <>
+          <pre>{JSON.stringify(exampleData, null, 2)}</pre>
+          <br />
+          <button onClick={reloadDataHandler}>Reload Data</button>
+        </>
       ) : exampleData === null ? (
         "error loading data"
       ) : (

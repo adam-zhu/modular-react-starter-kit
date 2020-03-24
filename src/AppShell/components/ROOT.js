@@ -1,8 +1,18 @@
 import React, { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { BrowserRouter as Router, useLocation } from "react-router-dom";
 import GlobalHeader from "./GlobalHeader";
+import Routes from "Routes";
 
-const AppShellRootComponent = ({ children }) => {
+const AppShell = () => {
+  return (
+    <Router>
+      <GlobalHeader />
+      <AppShellContent />
+    </Router>
+  );
+};
+
+const AppShellContent = () => {
   const location = useLocation();
   const { pathname, search, hash } = location;
 
@@ -11,12 +21,7 @@ const AppShellRootComponent = ({ children }) => {
     window.scrollTo(0, 0);
   }, [pathname]);
 
-  return (
-    <>
-      <GlobalHeader />
-      {children}
-    </>
-  );
+  return <Routes />;
 };
 
-export default AppShellRootComponent;
+export default AppShell;

@@ -3,30 +3,18 @@ const initialState = {
   userDetails: undefined
 };
 
-export const createActionTypes = MODULE_KEY => ({
-  SET_USER: `${MODULE_KEY}/AppShell/set_user`,
-  SET_USER_DETAILS: `${MODULE_KEY}/AppShell/set_user_details`
-});
+export const ACTION_TYPES = {
+  SET: `AppShell/SET`
+};
 
-const createReducer = MODULE_KEY => (state = initialState, action) => {
-  const actionTypes = createActionTypes(MODULE_KEY);
-
+export default (state = initialState, action) => {
   switch (action.type) {
-    case actionTypes.SET_USER:
+    case ACTION_TYPES.SET:
       return {
         ...state,
-        user: action.payload
+        ...action.payload
       };
-
-    case actionTypes.SET_USER_DETAILS:
-      return {
-        ...state,
-        userDetails: action.payload
-      };
-
     default:
       return state;
   }
 };
-
-export default createReducer;

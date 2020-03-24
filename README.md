@@ -11,18 +11,19 @@ Build UI using "modules". Modules are just React components that do special stuf
 
 The utilities for creating a module are:
 ```
-import React from "react";
+import React, { useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { DynamicModuleLoader } from "redux-dynamic-modules-react";
-import { all, spawn } from "redux-saga/effects";
-import { createSelector } from "reselect";
 
 export const DynamicModule = ({
   MODULE_KEY,
   ModuleRootComponent,
   ModuleRootReducer,
   ModuleRootSaga,
-  onLoadActions,
+  onLoadActions, // on module reducer load
   onUnloadActions,
+  onMountActions, // on module root React component mount
+  onDismountActions,
   children,
   ...props
 }) => {
@@ -37,43 +38,46 @@ export const DynamicModule = ({
   };
 
   return (
-    <DynamicModuleLoader modules={[moduleConfig]}>
-      <ModuleRootComponent {...props}>{children}</ModuleRootComponent>
+    <DynamicModuleLoader strictMode={true} modules={[moduleConfig]}>
+      <MountHookWrapper
+        onMountActions={onMountActions}
+        onDismountActions={onDismountActions}
+      >
+        <ModuleRootComponent {...props}>{children}</ModuleRootComponent>
+      </MountHookWrapper>
     </DynamicModuleLoader>
   );
 };
 
-const attachSagaListener = ({ take, trigger, saga }) => {
-  return spawn(function*() {
-    yield take(trigger, saga);
-  });
+const MountHookWrapper = ({
+  onMountActions,
+  onDismountActions,
+  children
+}) => {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (Array.isArray(onMountActions)) {
+      onMountActions.forEach(dispatch);
+    }
+
+    if (Array.isArray(onDismountActions)) {
+      return () => onDismountActions.forEach(dispatch);
+    }
+  }, [onMountActions, onDismountActions, dispatch]);
+
+  return <>{children}</>;
 };
 
-export const createRootSaga = sagaAttachments => {
-  const sagaListeners = Object.values(sagaAttachments);
-
-  return function*() {
-    yield all(sagaListeners.map(attachSagaListener));
-  };
-};
-
-export const getSagaTriggers = sagaAttachments =>
-  Object.fromEntries(
-    Object.entries(sagaAttachments).map(([key, { take, trigger, saga }]) => [
-      key,
-      trigger
-    ])
-  );
-
-export const createModuleSelector = (MODULE_KEY, ...selectors) =>
-  createSelector(rootState => rootState[MODULE_KEY], ...selectors);
 ```
 
 [`<DynamicModuleLoader />` comes from `redux-dynamic-modules`](https://github.com/microsoft/redux-dynamic-modules).
 
-Advantages of this method are that UI can be built by assembling entirely isolated components without sacrificing global control. Modules can be generally 1:1 with product features, and all code for a given product feature can be colocated within the module. Modules are React components, and when they are mounted or unmounted by the React DOM they set up and manage all of their dependencies in the background. When a module is declared as part of a React component's render content, it is passed a `MODULE_KEY` which is both the global Redux store key its reducer is keyed under and also the prefix for all its action types.
+Advantages of this method are that UI can be built by assembling entirely isolated components without sacrificing global control. Modules can be generally 1:1 with product features, and all code for a given product feature can be colocated within the module. Modules are React components, and when they are mounted or unmounted by the React DOM they set up and manage all of their dependencies in the background.
 
-Because the React DOM is the top-level controller of what is loaded and what is not, if a module is mounted to the React DOM then we have access to its state through its `MODULE_KEY`. We can then use this to expose any exterior interactions against the module's state from elsewhere in the application. Modules do not need to know about any parent context and can ask for any data they need to be passed in at mount time. With the use of a dynamic loading technique such as `React.lazy` or `react-loadable`, modules can be easily codesplit and dynamically loaded at runtime.
+Because the React DOM is the top-level controller of what modules are loaded and what are not, if a module is mounted to the React DOM then its state can be accessed and interacted with through redux. Module actions and sagas are easily accessible to application context. Modules do not need to know about any parent context, and parent render contexts are fully empowered to control their child modules. With the use of a dynamic loading technique such as `React.lazy` or `react-loadable`, modules can be easily codesplit and dynamically loaded at runtime.
+
+If a codebase is built this way, then the only code that is running in the project is what is mounted to the React DOM. The only state that exists to manage is what drives what is rendered to the screen. Once a component unmounts from the React DOM, its redux state will also disappear.
 
 Here is an example module declaration:
 ```
@@ -91,40 +95,33 @@ Here is an example module declaration:
 
 import React from "react";
 import { DynamicModule } from "Lib/modules";
-import createReducer from "./reducer";
-import initModuleSagas from "./sagas";
-import ExampleModuleRootComponent from "./components/ROOT";
+import ModuleRootComponent from "./components/ROOT";
+import ModuleRootReducer from "./reducer";
+import ModuleRootSaga from "./sagas";
 
-/*
-  @@@@@@@@@@@@@@@@@@@@@@@@@
-    ExampleModule
-  @@@@@@@@@@@@@@@@@@@@@@@@@
-*/
+const MODULE_KEY = "ExampleModule";
 
-export const ModuleContext = React.createContext();
-export default ({ MODULE_KEY, children, ...props }) => {
-  const moduleRootReducer = createReducer(MODULE_KEY);
-  const { rootSaga, triggers } = initModuleSagas(MODULE_KEY);
-  const onLoadActions = [
-    {
-      type: triggers.fetchExampleData
-    }
-  ];
-  const onUnloadActions = [];
-
+export default ({
+  onLoadActions,
+  onUnloadActions,
+  onMountActions,
+  onDismountActions,
+  children,
+  ...props
+}) => {
   return (
-    <ModuleContext.Provider value={{ MODULE_KEY, triggers }}>
-      <DynamicModule
-        MODULE_KEY={MODULE_KEY}
-        ModuleRootComponent={ExampleModuleRootComponent}
-        ModuleRootReducer={moduleRootReducer}
-        ModuleRootSaga={rootSaga}
-        onLoadActions={onLoadActions}
-        onUnloadActions={onUnloadActions}
-        children={children}
-        {...props}
-      />
-    </ModuleContext.Provider>
+    <DynamicModule
+      MODULE_KEY={MODULE_KEY}
+      ModuleRootComponent={ModuleRootComponent}
+      ModuleRootReducer={ModuleRootReducer}
+      ModuleRootSaga={ModuleRootSaga}
+      onLoadActions={onLoadActions}
+      onUnloadActions={onUnloadActions}
+      onMountActions={onMountActions}
+      onDismountActions={onDismountActions}
+      children={children}
+      {...props}
+    />
   );
 };
 ```
@@ -135,72 +132,70 @@ const initialState = {
   exampleData: undefined
 };
 
-export const createActionTypes = MODULE_KEY => ({
-  SET_EXAMPLE_DATA: `${MODULE_KEY}/ExampleModule/set_example_data`
-});
+export const ACTION_TYPES = {
+  SET: `ExampleModule/SET`
+};
 
-const createReducer = MODULE_KEY => (state = initialState, action) => {
-  const actionTypes = createActionTypes(MODULE_KEY);
-
+export default (state = initialState, action) => {
   switch (action.type) {
-    case actionTypes.SET_EXAMPLE_DATA:
+    case ACTION_TYPES.SET:
       return {
         ...state,
-        exampleData: action.payload
+        ...action.payload
       };
 
     default:
       return state;
   }
 };
-
-export default createReducer;
 ```
 ```
 // sagas.js
 
-import { call, put, takeEvery } from "redux-saga/effects";
-import { createRootSaga, getSagaTriggers } from "Lib/modules";
+import { all, call, put, spawn, takeLatest } from "redux-saga/effects";
 import { getExampleData } from "./services";
-import { createActionTypes } from "./reducer";
+import { ACTION_TYPES } from "./reducer";
 
-const fetchExampleData = MODULE_KEY =>
-  function*({ type, payload }) {
-    const actionTypes = createActionTypes(MODULE_KEY);
-
-    try {
-      const exampleData = yield call(getExampleData);
-
-      yield put({
-        type: actionTypes.SET_EXAMPLE_DATA,
-        payload: exampleData
-      });
-    } catch (e) {
-      yield put({
-        type: actionTypes.SET_EXAMPLE_DATA,
-        payload: null
-      });
-    }
-  };
-
-const getSagaAttachments = MODULE_KEY => ({
-  fetchExampleData: {
-    take: takeEvery,
-    trigger: `${MODULE_KEY}/ExampleModule/TRIGGER_fetchExampleData`,
-    saga: fetchExampleData(MODULE_KEY)
+const fetchExampleDataSaga = function*(triggerAction) {
+  if (triggerAction.showLoading === true) {
+    yield put({
+      type: ACTION_TYPES.SET,
+      payload: { exampleData: undefined }
+    });
   }
-});
 
-const initModuleSagas = MODULE_KEY => {
-  const sagaAttachments = getSagaAttachments(MODULE_KEY);
+  try {
+    const exampleData = yield call(getExampleData);
 
-  return {
-    rootSaga: createRootSaga(sagaAttachments),
-    triggers: getSagaTriggers(sagaAttachments)
-  };
+    yield put({
+      type: ACTION_TYPES.SET,
+      payload: { exampleData }
+    });
+  } catch (e) {
+    yield put({
+      type: ACTION_TYPES.SET,
+      payload: { exampleData: null }
+    });
+  }
 };
 
-export default initModuleSagas;
+export const SAGAS = {
+  fetchExampleData: {
+    take: takeLatest,
+    trigger: "ExampleModule/fetchExampleData",
+    saga: fetchExampleDataSaga
+  }
+};
+
+export default function* ModuleRootSaga() {
+  yield all(
+    Object.values(SAGAS).map(({ take, trigger, saga }) =>
+      spawn(function*() {
+        yield take(trigger, saga);
+      })
+    )
+  );
+}
 ```
 ```
 // services.js
@@ -216,38 +211,32 @@ export const getExampleData = async () => {
 };
 ```
 ```
-// selectors.js
-
-import { createModuleSelector } from "Lib/modules";
-
-export const getExampleData = MODULE_KEY => rootState => {
-  const exampleDataSelector = createModuleSelector(
-    MODULE_KEY,
-    state => state.exampleData
-  );
-  const exampleData = exampleDataSelector(rootState);
-
-  return exampleData;
-};
-```
-```
 // components/ROOT.js
 
-import React, { useContext } from "react";
+import React from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { getExampleData } from "../selectors";
-import { ModuleContext } from "../module";
+import { SAGAS } from "../sagas";
 
-const ExampleModule = () => {
+const ExampleModule = props => {
   const exampleData = useSelector(
-    getExampleData(useContext(ModuleContext).MODULE_KEY)
+    rootState => rootState.ExampleModule.exampleData
   );
+  const dispatch = useDispatch();
+  const reloadDataHandler = e =>
+    dispatch({
+      type: SAGAS.fetchExampleData.trigger,
+      showLoading: true
+    });
 
   return (
     <div>
       <h6>Example Module</h6>
       {exampleData ? (
-        <pre>{JSON.stringify(exampleData, null, 2)}</pre>
+        <>
+          <pre>{JSON.stringify(exampleData, null, 2)}</pre>
+          <br />
+          <button onClick={reloadDataHandler}>Reload Data</button>
+        </>
       ) : exampleData === null ? (
         "error loading data"
       ) : (

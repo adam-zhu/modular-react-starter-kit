@@ -1,42 +1,44 @@
-import { call, put, takeEvery } from "redux-saga/effects";
-import { createRootSaga, getSagaTriggers } from "Lib/modules";
+import { all, call, put, spawn, takeLatest } from "redux-saga/effects";
 import { getExampleData } from "./services";
-import { createActionTypes } from "./reducer";
+import { ACTION_TYPES } from "./reducer";
 
-const fetchExampleData = MODULE_KEY =>
-  function*({ type, payload }) {
-    const actionTypes = createActionTypes(MODULE_KEY);
-
-    try {
-      const exampleData = yield call(getExampleData);
-
-      yield put({
-        type: actionTypes.SET_EXAMPLE_DATA,
-        payload: exampleData
-      });
-    } catch (e) {
-      yield put({
-        type: actionTypes.SET_EXAMPLE_DATA,
-        payload: null
-      });
-    }
-  };
-
-const getSagaAttachments = MODULE_KEY => ({
-  fetchExampleData: {
-    take: takeEvery,
-    trigger: `${MODULE_KEY}/ExampleModule/TRIGGER_fetchExampleData`,
-    saga: fetchExampleData(MODULE_KEY)
+const fetchExampleDataSaga = function*(triggerAction) {
+  if (triggerAction.showLoading === true) {
+    yield put({
+      type: ACTION_TYPES.SET,
+      payload: { exampleData: undefined }
+    });
   }
-});
 
-const initModuleSagas = MODULE_KEY => {
-  const sagaAttachments = getSagaAttachments(MODULE_KEY);
+  try {
+    const exampleData = yield call(getExampleData);
 
-  return {
-    rootSaga: createRootSaga(sagaAttachments),
-    triggers: getSagaTriggers(sagaAttachments)
-  };
+    yield put({
+      type: ACTION_TYPES.SET,
+      payload: { exampleData }
+    });
+  } catch (e) {
+    yield put({
+      type: ACTION_TYPES.SET,
+      payload: { exampleData: null }
+    });
+  }
 };
 
-export default initModuleSagas;
+export const SAGAS = {
+  fetchExampleData: {
+    take: takeLatest,
+    trigger: "ExampleModule/fetchExampleData",
+    saga: fetchExampleDataSaga
+  }
+};
+
+export default function* ModuleRootSaga() {
+  yield all(
+    Object.values(SAGAS).map(({ take, trigger, saga }) =>
+      spawn(function*() {
+        yield take(trigger, saga);
+      })
+    )
+  );
+}

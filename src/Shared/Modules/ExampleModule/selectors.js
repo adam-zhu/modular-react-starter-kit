@@ -1,11 +1,3 @@
-import { createModuleSelector } from "Lib/modules";
+import { createSelector } from "reselect";
 
-export const getExampleData = MODULE_KEY => rootState => {
-  const exampleDataSelector = createModuleSelector(
-    MODULE_KEY,
-    state => state.exampleData
-  );
-  const exampleData = exampleDataSelector(rootState);
-
-  return exampleData;
-};
+// centralize any selectors used across multiple module components here

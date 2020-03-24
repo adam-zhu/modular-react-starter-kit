@@ -1,7 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { DynamicModuleLoader } from "redux-dynamic-modules-react";
-import { all, spawn } from "redux-saga/effects";
-import { createSelector } from "reselect";
 
 export const DynamicModule = ({
   MODULE_KEY,
@@ -10,6 +9,8 @@ export const DynamicModule = ({
   ModuleRootSaga,
   onLoadActions,
   onUnloadActions,
+  onMountActions,
+  onDismountActions,
   children,
   ...props
 }) => {
@@ -24,33 +25,29 @@ export const DynamicModule = ({
   };
 
   return (
-    <DynamicModuleLoader modules={[moduleConfig]}>
-      <ModuleRootComponent {...props}>{children}</ModuleRootComponent>
+    <DynamicModuleLoader strictMode={true} modules={[moduleConfig]}>
+      <MountHookWrapper
+        onMountActions={onMountActions}
+        onDismountActions={onDismountActions}
+      >
+        <ModuleRootComponent {...props}>{children}</ModuleRootComponent>
+      </MountHookWrapper>
     </DynamicModuleLoader>
   );
 };
 
-const attachSagaListener = ({ take, trigger, saga }) => {
-  return spawn(function*() {
-    yield take(trigger, saga);
-  });
+const MountHookWrapper = ({ onMountActions, onDismountActions, children }) => {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (Array.isArray(onMountActions)) {
+      onMountActions.forEach(dispatch);
+    }
+
+    if (Array.isArray(onDismountActions)) {
+      return () => onDismountActions.forEach(dispatch);
+    }
+  }, [onMountActions, onDismountActions, dispatch]);
+
+  return <>{children}</>;
 };
-
-export const createRootSaga = sagaAttachments => {
-  const sagaListeners = Object.values(sagaAttachments);
-
-  return function*() {
-    yield all(sagaListeners.map(attachSagaListener));
-  };
-};
-
-export const getSagaTriggers = sagaAttachments =>
-  Object.fromEntries(
-    Object.entries(sagaAttachments).map(([key, { take, trigger, saga }]) => [
-      key,
-      trigger
-    ])
-  );
-
-export const createModuleSelector = (MODULE_KEY, ...selectors) =>
-  createSelector(rootState => rootState[MODULE_KEY], ...selectors);

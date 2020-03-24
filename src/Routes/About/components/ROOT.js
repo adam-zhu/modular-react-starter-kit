@@ -1,12 +1,11 @@
-import React, { lazy, Suspense, useContext } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { getData } from "../selectors";
-import { ModuleContext } from "../module";
+import React, { lazy, Suspense } from "react";
+import { useSelector } from "react-redux";
+import { ACTION_TYPES as ExampleModuleActionTypes } from "Shared/Modules/ExampleModule/reducer";
 
 const ExampleModule = lazy(() => import("Shared/Modules/ExampleModule/module"));
 
 const About = () => {
-  const data = useSelector(getData(useContext(ModuleContext).MODULE_KEY));
+  const data = useSelector(rootState => rootState.About.data);
 
   return (
     <>
@@ -19,8 +18,14 @@ const About = () => {
         <progress />
       )}
       <Suspense fallback={"loading ExampleModule..."}>
-        <ExampleModule MODULE_KEY="AboutPageExampleModule1" />
-        <ExampleModule MODULE_KEY="AboutPageExampleModule2" />
+        <ExampleModule
+          onMountActions={[
+            {
+              type: ExampleModuleActionTypes.SET,
+              payload: { exampleData: "set by user context" }
+            }
+          ]}
+        />
       </Suspense>
     </>
   );

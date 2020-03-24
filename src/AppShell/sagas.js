@@ -1,60 +1,50 @@
-import { call, put, takeEvery } from "redux-saga/effects";
-import { createRootSaga, getSagaTriggers } from "Lib/modules";
+import { all, call, put, spawn, takeLatest } from "redux-saga/effects";
 import { getUser, getUserDetails } from "./services";
-import { createActionTypes } from "./reducer";
+import { ACTION_TYPES } from "./reducer";
 
-const fetchUser = MODULE_KEY =>
-  function*({ type, payload }) {
-    const actionTypes = createActionTypes(MODULE_KEY);
-    const triggers = getSagaTriggers(getSagaAttachments(MODULE_KEY));
+const fetchUserSaga = function*(triggerAction) {
+  try {
+    const user = yield call(getUser);
 
-    try {
-      const user = yield call(getUser);
-
-      yield put({ type: actionTypes.SET_USER, payload: user });
-      yield put({
-        type: triggers.fetchUserDetails,
-        payload: { id: user.id }
-      });
-    } catch (e) {
-      yield put({ type: actionTypes.SET_USER, payload: null });
-    }
-  };
-
-const fetchUserDetails = MODULE_KEY =>
-  function*({ type, payload }) {
-    const { id } = payload; // user id for
-    const actionTypes = createActionTypes(MODULE_KEY);
-
-    try {
-      const userDetails = yield call(getUserDetails, { id });
-
-      yield put({ type: actionTypes.SET_USER_DETAILS, payload: userDetails });
-    } catch (e) {
-      yield put({ type: actionTypes.SET_USER_DETAILS, payload: null });
-    }
-  };
-
-const getSagaAttachments = MODULE_KEY => ({
-  fetchUser: {
-    take: takeEvery,
-    trigger: `${MODULE_KEY}/AppShell/TRIGGER_fetchUser`,
-    saga: fetchUser(MODULE_KEY)
-  },
-  fetchUserDetails: {
-    take: takeEvery,
-    trigger: `${MODULE_KEY}/AppShell/TRIGGER_fetchUserDetails`,
-    saga: fetchUserDetails(MODULE_KEY)
+    yield put({ type: ACTION_TYPES.SET, payload: { user } });
+    yield put({
+      type: SAGAS.fetchUserDetails.trigger,
+      id: user.id
+    });
+  } catch (e) {
+    yield put({ type: ACTION_TYPES.SET, payload: { user: null } });
   }
-});
-
-const initModuleSagas = MODULE_KEY => {
-  const sagaAttachments = getSagaAttachments(MODULE_KEY);
-
-  return {
-    rootSaga: createRootSaga(sagaAttachments),
-    triggers: getSagaTriggers(sagaAttachments)
-  };
 };
 
-export default initModuleSagas;
+const fetchUserDetailsSaga = function*(triggerAction) {
+  try {
+    const userDetails = yield call(getUserDetails, { id: triggerAction.id });
+
+    yield put({ type: ACTION_TYPES.SET, payload: { userDetails } });
+  } catch (e) {
+    yield put({ type: ACTION_TYPES.SET, payload: { userDetails: null } });
+  }
+};
+
+export const SAGAS = {
+  fetchUser: {
+    take: takeLatest,
+    trigger: `AppShell/fetchUser`,
+    saga: fetchUserSaga
+  },
+  fetchUserDetails: {
+    take: takeLatest,
+    trigger: `AppShell/fetchUserDetails`,
+    saga: fetchUserDetailsSaga
+  }
+};
+
+export default function* ModuleRootSaga() {
+  yield all(
+    Object.values(SAGAS).map(({ take, trigger, saga }) =>
+      spawn(function*() {
+        yield take(trigger, saga);
+      })
+    )
+  );
+}

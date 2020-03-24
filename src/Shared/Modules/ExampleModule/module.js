@@ -1,38 +1,31 @@
 import React from "react";
 import { DynamicModule } from "Lib/modules";
-import createReducer from "./reducer";
-import initModuleSagas from "./sagas";
-import ExampleModuleRootComponent from "./components/ROOT";
+import ModuleRootComponent from "./components/ROOT";
+import ModuleRootReducer from "./reducer";
+import ModuleRootSaga from "./sagas";
 
-/*
-  @@@@@@@@@@@@@@@@@@@@@@@@@
-    ExampleModule
-  @@@@@@@@@@@@@@@@@@@@@@@@@
-*/
+const MODULE_KEY = "ExampleModule";
 
-export const ModuleContext = React.createContext();
-export default ({ MODULE_KEY, children, ...props }) => {
-  const moduleRootReducer = createReducer(MODULE_KEY);
-  const { rootSaga, triggers } = initModuleSagas(MODULE_KEY);
-  const onLoadActions = [
-    {
-      type: triggers.fetchExampleData
-    }
-  ];
-  const onUnloadActions = [];
-
+export default ({
+  onLoadActions,
+  onUnloadActions,
+  onMountActions,
+  onDismountActions,
+  children,
+  ...props
+}) => {
   return (
-    <ModuleContext.Provider value={{ MODULE_KEY, triggers }}>
-      <DynamicModule
-        MODULE_KEY={MODULE_KEY}
-        ModuleRootComponent={ExampleModuleRootComponent}
-        ModuleRootReducer={moduleRootReducer}
-        ModuleRootSaga={rootSaga}
-        onLoadActions={onLoadActions}
-        onUnloadActions={onUnloadActions}
-        children={children}
-        {...props}
-      />
-    </ModuleContext.Provider>
+    <DynamicModule
+      MODULE_KEY={MODULE_KEY}
+      ModuleRootComponent={ModuleRootComponent}
+      ModuleRootReducer={ModuleRootReducer}
+      ModuleRootSaga={ModuleRootSaga}
+      onLoadActions={onLoadActions}
+      onUnloadActions={onUnloadActions}
+      onMountActions={onMountActions}
+      onDismountActions={onDismountActions}
+      children={children}
+      {...props}
+    />
   );
 };
